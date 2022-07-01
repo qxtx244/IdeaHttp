@@ -1,0 +1,40 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+buildscript {
+    apply from: '_gradleconf/basic.gradle'
+    apply from: '_gradleconf/dependencies.gradle'
+
+    repositories {
+        aliRepo.each { repo -> maven { url repo } }
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.android.tools.build:gradle:$buildGradleVer"
+        classpath classpaths.kotlingp
+    }
+}
+
+subprojects {
+    repositories {
+        aliRepo.each { repo -> maven { url repo } }
+        google()
+        mavenCentral()
+    }
+
+    def toolsScript = "$gradleConfPath/tools.gradle"
+    if (file(toolsScript).exists()) apply from: toolsScript
+
+    def basicScript = "$gradleConfPath/basic.gradle"
+    if (file(basicScript).exists()) apply from: basicScript
+
+    def dependsScript = "$gradleConfPath/dependencies.gradle"
+    if (file(dependsScript).exists()) apply from: dependsScript
+
+    //如果子project根目录存在constants.gradle文件，父工程将自动为其引入
+    def projConstantsScript = "${projectDir.absolutePath}/constants.gradle"
+    if (file(projConstantsScript).exists()) apply from: projConstantsScript
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

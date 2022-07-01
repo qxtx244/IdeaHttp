@@ -1,0 +1,3 @@
+rootProject.name = "IdeaHttp"
+include ':demo'
+include ':IdeaHttp'
