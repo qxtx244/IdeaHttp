@@ -2,59 +2,60 @@ IdeaHttp
 ========
 
 ## **概述**
-+ 完全使用Kotlin开发
 + 基于OkHttp3封装，遵循RFC7231，RFC2616等协议标准。
 + 借鉴于Retrofit2，支持请求返回数据的反序列化和请求返回的线程切换
 + 链式调用在使用上更加简洁
 + 请求过程拆分，各个阶段创建的对象可复用
 + 默认支持https请求
 + 支持请求拦截器的动态添加/移除
-+ 已集成三方库
-  - okhttp-4.9.3（已集成）
-  - okio-2.8.0（已集成）
-  - fastjson-1.2.32（已集成）
++ 使用的三方库  
+  - [OkHttp-4.9.3](https://github.com/square/okhttp/tree/parent-4.9.3)
+  - [Fastjson-1.2.32](https://github.com/alibaba/fastjson/tree/1.2.32)
 
 ## **使用**
 
-### **使用说明**
-+ **代码混淆**  
-  模块本身不做混淆，如果宿主项目开启了混淆，请加入以下代码到混淆规则：
-  ```
-  -keep class com.qxtx.idea.http.** {*;}
-  -keep class okhttp3.** {*;}
-  ```
-+ **安卓高版本对http的支持**  
-  注意：高版本安卓系统默认不支持http请求。需要手动添加http的支持，否则无法使用http请求。处理方法如下：  
-  · 添加资源目录：名称为xml，在此目录下创建任意名称（如http_config）的xml文件，输入以下内容：
-  ```
-  <?xml version="1.0" encoding="utf-8"?>
-  <network-security-config>
-      <base-config cleartextTrafficPermitted="true" />  //允许使用http
-  </network-security-config>
-  ```
-  在AndroidManifest.xml中，为<application节点添加两个属性：
-  ```
-  <manifest
-      <application
-          ...
-          android:usesCleartextTraffic="true"
-          android:networkSecurityConfig="@xml/http_config">
-  </manifest>
-  ```
-### **功能使用**
+### **添加到项目**
+1. 添加mavenCentral仓库  
+   `Gradle6.x或更低版本`  
+   在工程根build.gradle中
+   ```
+   buildscript {
+     repositories {
+         mavenCentral() //添加这行代码
+     }
+   }
+   ```
+   `Gradle7.x及更高版本`
+   ```
+   dependencyResolutionManagement {
+        repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+        repositories {              
+            mavenCentral()  //添加这行代码
+        }
+    }
+   ```
+   注意，如果这里是**RepositoriesMode.PREFER_PROJECT**，则应改为使用Gradle6.x版本的配置方式
+2. 在目标module的build.gradle中
+   ```
+   dependencies {
+     implementation('io.github.qxtx244.http:IdeaHttp:1.0.0')  //添加这行代码
+   }
+   ```
+
+### **使用功能**
 * **创建实例**
   ```
-  val http = HttpBase()
+  val client = HttpBase()
   ```
 * **初始化**  
   根据需要，选择合适的初始化方法进行初始化
   ```
-  http.init(...)
+  client.init(...)
   ```
 * **开始请求**  
   · 创建请求入口对象。
   ```
-  val request = http
+  val request = client
         .newRequest(baseUrl)                         //创建请求对象，传入基础url，可在后续继续拼接url，以可以形成不同的请求地址       
         .addHeader(...)                               //支持添加多个请求头
         .addUrlParam(...)                             //支持添加多个url参数，将会以“&key=value”的形式拼接到url上
@@ -89,23 +90,52 @@ IdeaHttp
 4. **添加拦截器**
 + 一般拦截器，在处理请求之前会被触发，可添加多个
   ```
-  http.addInterceptor(HttpInterceptor)
+  client.addInterceptor(HttpInterceptor)
   ```
 + 网络请求拦截器，在检查请求缓存之后，并且开始网络请求之前被触发，可添加多个
   ```
-  http.addNetworkInterceptor(HttpInterceptor)
+  client.addNetworkInterceptor(HttpInterceptor)
   ```
 5. **取消请求**  
 取消请求可以取消包括正在进行的和还未开始的请求
 + 取消指定tag的请求任务
   ```
-  http.cancel(tag)
+  client.cancel(tag)
   ```
 + 取消全部请求
   ```
-  http.cancelAll()
+  client.cancelAll()
+  ```
+
+### **其它说明**
++ **FastJson的版本选择**  
+  FastJson对kotlin的支持并不完美，目前验证1.2.32版本是可用的。如希望自行更换其它版本，请先确认目标版本是否支持kotlin类的序列化/反序列化。
++ **代码混淆**  
+  模块本身不做混淆，如果宿主项目开启了混淆，请加入以下代码到混淆规则：
+  ```
+  -keep class com.qxtx.idea.http.** {*;}
+  -keep class okhttp3.** {*;}
+  ```
++ **安卓高版本对http的支持**  
+  注意：高版本安卓系统默认不支持http请求。需要手动添加http的支持，否则无法使用http请求。处理方法如下：  
+  · 添加资源目录：名称为xml，在此目录下创建任意名称（如http_config）的xml文件，输入以下内容：
+  ```
+  <?xml version="1.0" encoding="utf-8"?>
+  <network-security-config>
+      <base-config cleartextTrafficPermitted="true" />  //允许使用http
+  </network-security-config>
+  ```
+  在AndroidManifest.xml中，为<application节点添加两个属性：
+  ```
+  <manifest
+      <application
+          ...
+          android:usesCleartextTraffic="true"
+          android:networkSecurityConfig="@xml/http_config">
+  </manifest>
   ```
 
 ## **Demo**
-demo中演示了如何使用IdeaHttp去执行一些同步/异步请求，并包含配置拦截器，取消请求等部分操作。
-在demo/Doc目录中，提供了一个httpServer
+demo中演示了如何使用IdeaHttp去执行一些同步/异步请求，并包含拦截器配置，反序列化器配置、线程切换和取消请求等部分操作。  
+在demo/Doc目录中，提供了配套的本地Http服务端的实现代码，用于演示IdeaHttp对响应数据的自动反序列化能力。  
+HttpServer在IntelliJ Idea(jdk使用corretto-11.0.14.1)上可用。
