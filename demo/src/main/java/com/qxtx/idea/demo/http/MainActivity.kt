@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.qxtx.idea.demo.http.databinding.ActivityMainBinding
 import com.qxtx.idea.http.HttpBase
+import com.qxtx.idea.http.RequestMethod
 import com.qxtx.idea.http.callback.HttpInterceptor
 import com.qxtx.idea.http.callback.IHttpCallback
 import com.qxtx.idea.http.converter.FastjsonConverterFactory
@@ -82,9 +83,7 @@ class MainActivity : AppCompatActivity() {
                     .enqueue("请求1", object: IHttpCallback<Response> {
                         override fun onResponse(call: Call, response: Response) {
                             Log.d("请求结果", "1, success=${response.isSuccessful}" +
-                                    "msg=${response.body as Msg}" +
-                                    ", time=${System.currentTimeMillis()} " +
-                                    "线程=${Thread.currentThread().name}")
+                                    "msg=${response.body as Msg}，线程=${Thread.currentThread().name}")
                         }
                         override fun onFailure(call: Call?, e: IOException?) {
                             Log.d("请求结果","1, 请求失败！")
@@ -98,8 +97,7 @@ class MainActivity : AppCompatActivity() {
                     .addBody("222222222222".toRequestBody())
                     .enqueue("请求2", object: IHttpCallback<Response> {
                         override fun onResponse(call: Call, response: Response) {
-                            Log.d("请求结果", "2, msg=${response.body}, time=${System.currentTimeMillis()}" +
-                                    ", 线程=${Thread.currentThread().name}")
+                            Log.d("请求结果", "2, msg=${response.body}, 线程=${Thread.currentThread().name}")
                         }
                         override fun onFailure(call: Call?, e: IOException?) {
                             Log.d("请求结果", "2, 请求失败！")
@@ -110,8 +108,14 @@ class MainActivity : AppCompatActivity() {
                     .setResponseConverter(FastjsonConverterFactory(MsgData::class.java))
                     .get()
                     .execute(Any()).apply {
-                        Log.d("请求结果", "3, msg=${this.body as MsgData?}, time=${System.currentTimeMillis()}" +
-                                ", 线程=${Thread.currentThread().name}")
+                        Log.d("请求结果", "3, msg=${body as MsgData?}, 线程=${Thread.currentThread().name}")
+                    }
+
+                request //patch请求
+                    .setResponseConverter(null)
+                    .requestMethod(RequestMethod.PATCH)
+                    .execute(Any()).apply {
+                        Log.d("请求结果", "3, msg=$body")
                     }
             }
         }
