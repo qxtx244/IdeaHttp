@@ -1,6 +1,8 @@
 package com.qxtx.idea.demo.http
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.qxtx.idea.demo.http.databinding.ActivityMainBinding
@@ -10,23 +12,22 @@ import com.qxtx.idea.http.callback.HttpInterceptor
 import com.qxtx.idea.http.callback.IHttpCallback
 import com.qxtx.idea.http.converter.FastjsonConverterFactory
 import com.qxtx.idea.http.response.Response
-import okhttp3.Call
-import okhttp3.Interceptor
+import okhttp3.*
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
+import java.net.HttpCookie
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 /**
  * @author QXTX-WIN
- * <p>
- * <b>Create Date</b><p> 2022/4/25 13:49
- * <p>
- * <b>Description</b>
- * <pre>
- *   http库测试界面。
- *   注意：反序列化的演示需要配合特定的http服务端（Doc/HttpServer.kt），因为要求服务端返回对应格式的数据，反序列化才能成功。
- *   如果
- * </pre>
+ *
+ * **Create Date** 2022/4/25 13:49
+ *
+ * **Description**
+ *
+ * http库测试界面。
+ * 注意：反序列化的演示需要配合特定的http服务端（Doc/HttpServer.kt），因为要求服务端返回对应格式的数据，反序列化才能成功。
  */
 class MainActivity : AppCompatActivity() {
 
@@ -37,14 +38,34 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        try {
-            testHttp()
-        } catch (e: Exception) {
-            e.printStackTrace()
+        binding.btnConverterReq.setOnClickListener {
+            testHttpAndConverter()
+        }
+
+        binding.btnCookieReq.setOnClickListener {
+            testCookies()
         }
     }
 
-    private fun testHttp() {
+    private fun testCookies() {
+        thread {
+            HttpBase().apply {
+                init(2000)
+
+                var resp = newRequest("http://192.168.1.6:12346/login")
+                    .get()
+                    .execute(Any())
+                println("登录回应的请求头：${resp.headers.toMultimap()}")
+
+                resp = newRequest("http://192.168.1.6:12346/logout")
+                    .get()
+                    .execute(Any())
+                println("登出结果：${resp.body}")
+            }
+        }
+    }
+
+    private fun testHttpAndConverter() {
         val http = HttpBase()
         http.apply {
             init(30000)

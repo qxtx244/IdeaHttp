@@ -1,12 +1,17 @@
 package com.qxtx.idea.http
 
 import com.qxtx.idea.http.callback.HttpInterceptor
+import com.qxtx.idea.http.tools.HttpLog
 import com.qxtx.idea.http.verifier.SslSocketHelper
 import okhttp3.Call
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.internal.toImmutableList
+import java.net.HttpCookie
 import java.util.concurrent.TimeUnit
+import kotlin.RuntimeException
 import kotlin.math.max
+import kotlin.math.min
 
 /**
  * @author QXTX-WIN
@@ -29,17 +34,88 @@ import kotlin.math.max
  * * 如果为配置反序列化方案，请求返回的对象[com.qxtx.idea.http.response.Response]中body字段为String类型。
  * * 支持动态添加和移除拦截器
  * * 内部捕获同步请求异常，并记录到[com.qxtx.idea.http.response.Response.cause]中
+ * * 支持手动设置Cookie
  */
 open class HttpBase: IHttp {
 
+    /**
+     * cookie缓存列表
+     * 索引为cookie匹配的地址或地址起始片段
+     * 值为cookie信息列表
+     */
+    internal val cookieJar: HashMap<String, MutableList<HttpCookie>> by lazy { HashMap() }
+
     companion object {
         internal val callMap = LinkedHashMap<Any, Call>()
+
+        /**
+         * 从url中解析domain
+         * 去掉前面的"http://"或"https://"，取第一级域名，即遇到第一个“:”或“/”结束
+         */
+        @JvmStatic
+        internal fun parseDomain(url: String) = url.let {
+            if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                url
+            } else {
+                val startIndex = it.indexOf("//") + 2
+                var endIndex1 = it.indexOf(':', startIndex)
+                var endIndex2 = it.indexOf("/", startIndex)
+                endIndex1 = if (endIndex1 < 0) it.length else endIndex1
+                endIndex2 = if (endIndex2 < 0) it.length else endIndex2
+                it.substring(startIndex, min(endIndex1, endIndex2))
+            }
+        }
     }
 
     private val interceptorList = ArrayList<HttpInterceptor>()
     private val networkInterceptorList = ArrayList<HttpInterceptor>()
 
     private var client: OkHttpClient? = null
+
+    override fun getCookie(url: String): MutableList<HttpCookie>? {
+        val domain = parseDomain(url)
+        return if (domain.isEmpty()) null else cookieJar[domain]
+    }
+
+    override fun setCookie(domain: String, name: String, value: String?) {
+        setCookie(HttpCookie(name, value).apply {
+            this.domain = parseDomain(domain)
+            path = "/"
+        })
+    }
+
+    override fun setCookie(cookie: HttpCookie) {
+        val domain = cookie.domain
+        if (domain == null) {
+            HttpLog.w("非法的cookie域，设置cookie无效")
+            return
+        }
+
+        val caches = getCookie(domain)
+        if (cookie.hasExpired()) {
+            caches?.toImmutableList()?.forEach { cache ->
+                if (cache.name == cookie.name && cache.path == cookie.path) {
+                    HttpLog.d("移除一个过期的cookie... cookie[${cookie.name}=${cookie.value}]")
+                    caches.remove(cache)
+                }
+            }
+        } else {
+            if (caches == null) {
+                HttpLog.d("缓存cookie... cookie=[${cookie.name}=${cookie.value}]")
+                cookieJar[domain] = mutableListOf(cookie)
+                return
+            }
+
+            caches.toImmutableList().forEach {
+                if (it.name == cookie.name) {
+                    caches.remove(it)
+                    return@forEach
+                }
+            }
+            HttpLog.d("缓存一个cookie... cookie=[${cookie.name}=${cookie.value}]")
+            caches.add(cookie)
+        }
+    }
 
     override fun init(callTimeoutMs: Long) {
         val timeoutMs = max(0, callTimeoutMs)
@@ -51,9 +127,9 @@ open class HttpBase: IHttp {
 
     override fun init(connectTimeoutMs: Long, readTimeoutMs: Long, writeTimeoutMs: Long) {
         client = newBuilder()
-            .connectTimeout(max(0, connectTimeoutMs).toLong(), TimeUnit.MILLISECONDS)
-            .readTimeout(max(0, readTimeoutMs).toLong(), TimeUnit.MILLISECONDS)
-            .writeTimeout(max(0, writeTimeoutMs).toLong(), TimeUnit.MILLISECONDS)
+            .connectTimeout(max(0L, connectTimeoutMs), TimeUnit.MILLISECONDS)
+            .readTimeout(max(0L, readTimeoutMs), TimeUnit.MILLISECONDS)
+            .writeTimeout(max(0L, writeTimeoutMs), TimeUnit.MILLISECONDS)
             .build()
     }
 
@@ -101,9 +177,9 @@ open class HttpBase: IHttp {
 
     override fun newRequest(baseUrl: String): IRequest {
         if (client == null) {
-            TODO("使用前必须初始化！")
+            throw RuntimeException("使用前必须初始化！")
         }
-        return BasicRequest(baseUrl, client!!)
+        return BasicRequest(this, baseUrl, client!!)
     }
 
     override fun cancel(tag: Any) {
@@ -133,7 +209,7 @@ open class HttpBase: IHttp {
                     chain.proceed(chain.request())
                 } else {
                     var isIntercept: Boolean
-                    val tempList = interceptorList.clone() as java.util.ArrayList<HttpInterceptor>
+                    val tempList = interceptorList.clone() as ArrayList<HttpInterceptor>
                     for (interceptor in tempList) {
                         isIntercept = interceptor.intercept(chain)
                         //当某个拦截器决定取消请求，则不再触发之后的拦截器回调
@@ -155,7 +231,7 @@ open class HttpBase: IHttp {
                     chain.proceed(chain.request())
                 } else {
                     var isIntercept: Boolean
-                    val tempList = networkInterceptorList.clone() as java.util.ArrayList<HttpInterceptor>
+                    val tempList = networkInterceptorList.clone() as ArrayList<HttpInterceptor>
                     for (interceptor in tempList) {
                         isIntercept = interceptor.intercept(chain)
                         if (chain.call().isCanceled()) {

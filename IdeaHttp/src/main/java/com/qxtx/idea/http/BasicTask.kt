@@ -1,5 +1,9 @@
 package com.qxtx.idea.http
 
+import android.hardware.camera2.CameraConstrainedHighSpeedCaptureSession
+import android.net.Uri
+import android.os.Parcel
+import android.os.Parcelable
 import com.qxtx.idea.http.callback.IHttpCallback
 import com.qxtx.idea.http.response.Response
 import com.qxtx.idea.http.tools.forEach
@@ -10,8 +14,13 @@ import com.qxtx.idea.http.task.ITask
 import com.qxtx.idea.http.tools.HttpLog
 import okhttp3.*
 import okhttp3.internal.http.HttpMethod
+import okhttp3.internal.toImmutableList
 import java.io.IOException
 import java.lang.Exception
+import java.lang.RuntimeException
+import java.net.HttpCookie
+import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * @author QXTX-WIN
@@ -49,6 +58,9 @@ abstract class BasicTask(
             } catch (e: Exception) {
                 Response.errorResponse(cause = e)
             }
+
+            checkCookie(response)
+
             return response?: Response.errorResponse()
         } finally {
             synchronized(HttpBase.callMap) {
@@ -68,6 +80,7 @@ abstract class BasicTask(
                 }
 
                 override fun onResponse(call: Call, response: Response) {
+                    checkCookie(response)
                     callback.onResponse(call, response)
                 }
             })
@@ -96,7 +109,32 @@ abstract class BasicTask(
 
             url(realUrl)
 
-            basicRequest.headers.forEach { (k, v) -> addHeader(k, v) }
+            //2022/8/5 16:02 检查是否存在cookie缓存，如果匹配到，则添加。
+            // 注意，用户可能会显式设置“Cookie”请求头字段，这类数据的优先级最高，因此缓存的cookie数据必须在此之前完成
+            val domain = HttpBase.parseDomain(realUrl)
+            val cookies = basicRequest.http.getCookie(domain)
+
+            var cookie = ""
+            cookies?.toImmutableList()?.forEach {
+                if (it.discard || it.hasExpired() || (it.secure && !realUrl.startsWith("https://"))) {
+                    cookies.remove(it)
+                } else {
+                    if (cookie.isNotEmpty()) cookie += ";"
+
+                    //拼装缓存的cookie
+                    cookie += "${it.name}=${it.value}"
+                }
+            }
+            if (cookie.isNotEmpty()) {
+                HttpLog.d("自动添加匹配的cookie缓存：Cookie=$cookie")
+                addHeader("Cookie", cookie)
+            }
+
+            val headers = basicRequest.headers.build()
+            headers.forEach {
+                HttpLog.d("header数据对：${it.first}:${it.second}")
+                addHeader(it.first, it.second)
+            }
 
             var requestBody: RequestBody? = null
             if (requestBodys.isNotEmpty()) {
@@ -111,7 +149,13 @@ abstract class BasicTask(
 
             when (requestMethod) {
                 RequestMethod.GET -> get()
-                RequestMethod.POST -> post(requestBody!!)
+                RequestMethod.POST -> {
+                    if (requestBody == null) {
+                        HttpLog.w("post请求缺少请求数据！")
+                        throw RuntimeException("不允许无请求数据的post请求！")
+                    }
+                    post(requestBody)
+                }
                 else -> method(requestMethod, requestBody)
             }
         }
@@ -154,7 +198,8 @@ abstract class BasicTask(
             if (subUrl == null) return baseUrl
 
             var result = baseUrl
-            if (baseUrl.endsWith("/") && !subUrl!!.startsWith("/")) {
+            //根据需要自动添加“/”分隔符
+            if (!baseUrl.endsWith("/") && !subUrl!!.startsWith("/")) {
                 result += "/"
             }
 
@@ -173,5 +218,33 @@ abstract class BasicTask(
             }
         }
         return url
+    }
+
+    /**
+     * 检查服务端返回的cookie数据
+     * @param response http请求结果
+     */
+    private fun checkCookie(response: Response?) {
+        //检查服务端是否要缓存cookie
+        if (response == null || !response.isSuccessful) {
+            return
+        }
+
+        //忽略与请求地址的域不一致的set-cookie字段
+        response.headers.forEach { pair ->
+            //发现apache的HttpServer，会使用“Set-cookie”这种仅首字母大写的格式，需要兼容
+            //“Set-Cookie2”字段可能会存在包含多个cookie数据的情况，目前不考虑这种字段
+            if (pair.first == "Set-Cookie" || pair.first == "Set-cookie") {
+                val requestDomain = HttpBase.parseDomain(response.request.url.toString())
+                val newCookie = (HttpCookie.parse(pair.second)[0] as HttpCookie).apply {
+                    if (domain == null) domain = requestDomain
+                    if (path == null) path = "/"
+                }
+
+                if (newCookie.domain == requestDomain) {
+                    basicRequest.http.setCookie(newCookie)
+                }
+            }
+        }
     }
 }

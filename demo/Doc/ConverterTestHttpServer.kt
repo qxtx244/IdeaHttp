@@ -10,7 +10,7 @@ import kotlin.concurrent.thread
 val pool = Executors.newFixedThreadPool(1)
 
 /**
- * http 服务端实现
+ * http服务端实现，用于测试IdeaHttp的反序列化能力，或者get/post等一般请求
  * com.sun.net.httpserver.HttpServer需要使用jdk corretto-11.0.14.1，推荐在idea中运行
  */
 fun main() {

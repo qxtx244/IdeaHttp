@@ -82,13 +82,6 @@ interface IRequest {
     fun addHeader(key: String, value: String): IRequest
 
     /**
-     * 添加请求头
-     * @param headers 一个或多个请求头数据
-     * @return [IRequest]对象
-     */
-    fun addHeader(headers: MultiPair<String, String>): IRequest
-
-    /**
      * 移除指定的请求头
      * @param key 目标请求头索引
      */

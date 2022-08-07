@@ -11,7 +11,7 @@ inline fun <K, V> MultiPair<K, V>.forEach(action: (Map.Entry<K, V>) -> Unit) {
  *
  * **Description**
  *
- * 复数键值对实现，非线程安全
+ * 不重复的键值对数据集实现，非线程安全
  *
  * @param K 索引类型
  * @param V 值类型
@@ -31,6 +31,10 @@ class MultiPair<K, V> {
     operator fun minusAssign(key: K) {
         remove(key)
     }
+
+    fun containsKey(key: K) = map.containsKey(key)
+
+    fun containsValue(value: V) = map.containsValue(value)
 
     /**
      * 添加元素

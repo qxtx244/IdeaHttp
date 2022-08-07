@@ -7,6 +7,8 @@ import com.qxtx.idea.http.tools.MultiPair
 import com.qxtx.idea.http.tools.urlDecode
 import com.qxtx.idea.http.tools.urlEncode
 import com.qxtx.idea.http.task.*
+import com.qxtx.idea.http.tools.minusAssign
+import okhttp3.Headers
 import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
 import java.util.concurrent.Executor
@@ -24,6 +26,7 @@ import java.util.concurrent.Executor
  * @param client 核心的http请求实现对象
  */
 class BasicRequest(
+    val http: IHttp,
     val baseUrl: String,
     val client: OkHttpClient
 ): IRequest {
@@ -41,8 +44,8 @@ class BasicRequest(
 
     /** url组成部分，如果非空，则和[baseUrl]拼接成完整的url */
     internal var subUrl: String? = null
-    /** 请求头数据集（键值对） */
-    internal val headers = MultiPair<String, String>()
+    /** 请求头数据 */
+    internal var headers = Headers.Builder()
     /** url参数的拼接数据集 */
     internal val urlParams = MultiPair<String, String>()
 
@@ -90,16 +93,13 @@ class BasicRequest(
         return this
     }
 
-    override fun addHeader(headers: MultiPair<String, String>): IRequest {
-        this.headers += headers
-        return this
-    }
-
     override fun removeHeader(key: String) {
         headers -= key
     }
 
-    override fun clearHeader() = headers.clear()
+    override fun clearHeader() {
+        headers = Headers.Builder()
+    }
 
     override fun addUrlParam(key: String, value: String): IRequest {
         urlParams[key.urlEncode()] = value.urlDecode()

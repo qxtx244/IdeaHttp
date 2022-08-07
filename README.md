@@ -2,12 +2,13 @@ IdeaHttp
 ========
 
 ## **概述**
-+ 基于OkHttp3封装，遵循RFC7231，RFC2616等协议标准。
++ 基于OkHttp3封装
 + 借鉴于Retrofit2，支持请求返回数据的反序列化和请求返回的线程切换
 + 链式调用在使用上更加简洁
 + 请求过程拆分，各个阶段创建的对象可复用
 + 默认支持https请求
 + 支持请求拦截器的动态添加/移除
++ 支持自动处理服务端下发的cookie
 + 使用的三方库  
   - [OkHttp-4.9.3](https://github.com/square/okhttp/tree/parent-4.9.3)
   - [Fastjson-1.2.32](https://github.com/alibaba/fastjson/tree/1.2.32)
@@ -52,6 +53,16 @@ IdeaHttp
   ```
   client.init(...)
   ```
+* **设置Cookie**  
+  支持手动设置cookie，在请求地址匹配成功时，自动为请求添加Cookie。
+  ```
+  client.setCookie("cookie的有效域", "cookie索引名称", "cookie值")
+  ```
+  或
+  ```
+  client.setCookie(HttpCookie("cookie索引名称", "cookie值"))
+  ```
+  例：".abc.d"可成功匹配"www.abc.d"，"http://www.abc.dd"等。
 * **开始请求**  
   · 创建请求入口对象。
   ```
@@ -64,14 +75,17 @@ IdeaHttp
         .setExecutor(Executor)                       //设置线程切换方案，请求返回后，在指定的线程中执行事件回调方法
   ```
   `request`对象可以复用。  
-  在每一次具体请求前，可以对baseUrl进行补全，以形成不同的请求地址，满足多种请求的需要。每次调用都会覆盖上一次的设置
+  在每一次具体请求前，可以对baseUrl进行补全，以形成不同的请求地址，满足多种请求的需要。每次调用都会覆盖上一次的设置。  
+  如果需要，将为拼接的url自动补充url分隔符“/”。
   ```
-  request.subUrl(subUrl)
+  request.setSubUrl(subUrl)
   ```
   · get请求
   ```
   val response = request.get().sync(tag1) //开始同步请求
-  
+  ```
+  或
+  ```
   request.get().async(tag2, IHttpCallback\<Response\>)  //开始异步请求
   ```
   · post请求
@@ -80,13 +94,15 @@ IdeaHttp
         //.addBody(...)     //可以选择添加不限项请求数据，HttpBase将会在请求时整合body数据，自动选择Content-Type
         .setBody(...)       //设置请求数据，和addBody(...)同时使用时，会覆盖addBody(...)设置过的body数据
         .sync(tag3)
-        
+  ```
+  或
+  ```
   request.post()
         //.addBody(...)
         .setBody(...)
         .async(tag4, IHttpCallback\<Response\>)
   ```
-  · 其它请求方式可自行查看
+  · 其它请求方式可自行了解
 4. **添加拦截器**
 + 一般拦截器，在处理请求之前会被触发，可添加多个
   ```
@@ -137,5 +153,5 @@ IdeaHttp
 
 ## **Demo**
 demo中演示了如何使用IdeaHttp去执行一些同步/异步请求，并包含拦截器配置，反序列化器配置、线程切换和取消请求等部分操作。  
-在demo/Doc目录中，提供了配套的本地Http服务端的实现代码，用于演示IdeaHttp对响应数据的自动反序列化能力。  
-HttpServer在IntelliJ Idea(jdk使用corretto-11.0.14.1)上可用。
+在demo/Doc目录中，提供了多个配套的本地Http服务端的实现代码，用于演示IdeaHttp对响应数据的自动反序列化能力。  
+Http服务端代码在IntelliJ Idea(jdk使用corretto-11.0.14.1)上可用。

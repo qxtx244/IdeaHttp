@@ -1,5 +1,6 @@
 package com.qxtx.idea.http.tools
 
+import android.text.BoringLayout
 import java.net.URLDecoder
 import java.net.URLEncoder
 
@@ -28,4 +29,20 @@ fun String?.urlEncode(charset: String = "utf-8"): String = URLEncoder.encode(thi
  */
 @JvmOverloads
 fun String?.urlDecode(charset: String = "utf-8"): String = URLDecoder.decode(this, charset)
+
+/**
+ * 检查字符串中是否包含指定字符
+ * @param ch 目标字符
+ *
+ * @return 检查结果
+ */
+fun String?.contains(ch: Char) = (this?.indexOf(ch) ?: -1) >= 0
+
+/**
+ * 检查字符串中是否包含指定子串
+ * @param str 目标字串
+ *
+ * @return 检查结果
+ */
+fun String?.contains(str: String) = (this?.indexOf(str) ?: -1) >= 0
 
