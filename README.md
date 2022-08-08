@@ -39,7 +39,7 @@ IdeaHttp
 2. 在目标module的build.gradle中
    ```
    dependencies {
-     implementation('io.github.qxtx244.http:IdeaHttp:1.0.0')  //添加这行代码
+     implementation('io.github.qxtx244.http:IdeaHttp:1.0.1')  //添加这行代码
    }
    ```
 
