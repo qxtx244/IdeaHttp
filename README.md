@@ -2,16 +2,17 @@ IdeaHttp
 ========
 
 ## **概述**
-+ 基于OkHttp3封装
-+ 借鉴于Retrofit2，支持请求返回数据的反序列化和请求返回的线程切换
++ 基于[OkHttp3](https://github.com/square/okhttp)封装
++ 支持请求结果回调的自动线程切换
 + 链式调用在使用上更加简洁
-+ 请求过程拆分，各个阶段创建的对象可复用
 + 默认支持https请求
 + 支持请求拦截器的动态添加/移除
-+ 支持自动处理服务端下发的cookie
-+ 使用的三方库  
-  - [OkHttp-4.9.3](https://github.com/square/okhttp/tree/parent-4.9.3)
-  - [Fastjson-1.2.32](https://github.com/alibaba/fastjson/tree/1.2.32)
++ 支持自动处理服务端下发的Cookie
++ 支持动态设置和复用反序列化器
++ 提供多种反序列化器扩展库，如FastJson，Moshi(对kotlin特攻的json解析器)等
++ 参考的项目：
+  - [OkGo](https://github.com/qxtx244/okhttp-OkGo)
+  - [Retrofit](https://github.com/square/retrofit)
 
 ## **使用**
 
@@ -44,16 +45,16 @@ IdeaHttp
    ```
 
 ### **使用功能**
-* **创建实例**
++ **创建实例**
   ```
   val client = HttpBase()
   ```
-* **初始化**  
++ **初始化**  
   根据需要，选择合适的初始化方法进行初始化
   ```
   client.init(...)
   ```
-* **设置Cookie**  
++ **设置Cookie**  
   支持手动设置cookie，在请求地址匹配成功时，自动为请求添加Cookie。
   ```
   client.setCookie("cookie的有效域", "cookie索引名称", "cookie值")
@@ -63,20 +64,20 @@ IdeaHttp
   client.setCookie(HttpCookie("cookie索引名称", "cookie值"))
   ```
   例：".abc.d"可成功匹配"www.abc.d"，"http://www.abc.dd"等。
-* **开始请求**  
++ **开始请求**  
   · 创建请求入口对象。
   ```
   val request = client
         .newRequest(baseUrl)                         //创建请求对象，传入基础url，可在后续继续拼接url，以可以形成不同的请求地址       
         .addHeader(...)                               //支持添加多个请求头
-        .addUrlParam(...)                             //支持添加多个url参数，将会以“&key=value”的形式拼接到url上
-        .setResponseConverter(Converter.Factory)  //设置反序列化方案，对请求返回的数据主动进行反序列化操作。
-                                                         //预置基于FastJson的反序列化方案FastjsonConverterFactory
+        .addUrlParam(...)                             //支持添加多个url参数，将会以“key=value”的形式拼接到url上
+        .setResponseConverter(Converter.Factory)  //设置反序列化器。当然，也可以在获取请求数据后，再使用单独的反序列化器对请求数据进行反序列化                        
         .setExecutor(Executor)                       //设置线程切换方案，请求返回后，在指定的线程中执行事件回调方法
   ```
-  `request`对象可以复用。  
-  在每一次具体请求前，可以对baseUrl进行补全，以形成不同的请求地址，满足多种请求的需要。每次调用都会覆盖上一次的设置。  
-  如果需要，将为拼接的url自动补充url分隔符“/”。
+  · `request`对象可以复用。  
+  · 可按需引入并使用反序列化器扩展库，如[ideahttp-fastjson]()，[ideahttp-moshi]()等。  
+  · 在每一次具体请求前，可以对baseUrl进行补全，以形成不同的请求地址，满足多种请求的需要。每次调用都会覆盖上一次的设置。  
+  · 如果需要，将为拼接的url自动补充url分隔符“/”。
   ```
   request.setSubUrl(subUrl)
   ```
@@ -86,7 +87,7 @@ IdeaHttp
   ```
   或
   ```
-  request.get().async(tag2, IHttpCallback\<Response\>)  //开始异步请求
+  request.get().async(tag2, IHttpCallback)  //开始异步请求
   ```
   · post请求
   ```
@@ -100,20 +101,40 @@ IdeaHttp
   request.post()
         //.addBody(...)
         .setBody(...)
-        .async(tag4, IHttpCallback\<Response\>)
+        .async(tag4, IHttpCallback)
   ```
-  · 其它请求方式可自行了解
-4. **添加拦截器**
-+ 一般拦截器，在处理请求之前会被触发，可添加多个
+  · 其它请求方式可自行了解。
+4. **请求数据的反序列化**  
+Response对象提供对请求数据格式进行转换的多种方法，包括反序列化。
++ **观察数据**
   ```
-  client.addInterceptor(HttpInterceptor)
+  val body = response.peekBody()
   ```
-+ 网络请求拦截器，在检查请求缓存之后，并且开始网络请求之前被触发，可添加多个
+  此操作不会对请求数据产生影响（返回数据的拷贝），但可能会增加内存的负担。
++ **获取原始类型**
   ```
-  client.addNetworkInterceptor(HttpInterceptor)
+  val body = response.rawBody()
   ```
+  获取未处理的Response对象。
++ **获取字符串**
+  ```
+  val body = response.stringBody(maxSize)
+  ```
+  此方法限制获取1MB以内的数据大小。一个Response对象仅可以调用一次，之后请求数据将会丢失。
++ **获取字节流**
+  ```
+  val body = response.streamBody()
+  ```
+  获取大数据的最佳获取方式。
++ **获取自定义类型（反序列化）**
+  ```
+  val data = response.parseBody<R>(converter)
+  ```
+  使用特定的反序列化器对请求数据进行一次反序列化。反序列化优先级：converter > `setResponseConverter`方法设置的反序列化器。
+  当未配置反序列化器时，返回的请求数据类型为原来的okhttp3.ResponseBody。  
+  一个Response对象仅可以调用一次，之后请求数据将会丢失。
 5. **取消请求**  
-取消请求可以取消包括正在进行的和还未开始的请求
+取消请求可以取消包括正在进行的和还未开始的请求。
 + 取消指定tag的请求任务
   ```
   client.cancel(tag)
@@ -121,6 +142,15 @@ IdeaHttp
 + 取消全部请求
   ```
   client.cancelAll()
+  ```
+6. **添加拦截器**
++ 一般拦截器，在处理请求之前会被触发，可添加多个
+  ```
+  client.addInterceptor(HttpInterceptor)
+  ```
++ 网络请求拦截器，在检查请求缓存之后，并且开始网络请求之前被触发，可添加多个
+  ```
+  client.addNetworkInterceptor(HttpInterceptor)
   ```
 
 ### **其它说明**

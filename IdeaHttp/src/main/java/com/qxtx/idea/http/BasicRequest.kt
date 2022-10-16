@@ -31,7 +31,7 @@ class BasicRequest(
     val client: OkHttpClient
 ): IRequest {
 
-    internal var responseConverterFactory: Converter.Factory<ResponseBody, Any>? = null
+    internal var responseConverterFactory: Converter.Factory<Any>? = null
 
     /** 请求结果回调的executor，如果调用时存在主线程，则默认为执行在主线程 */
     internal var callbackExecutor: Executor = Executor { command ->
@@ -78,7 +78,7 @@ class BasicRequest(
         return this
     }
 
-    override fun setResponseConverter(factory: Converter.Factory<ResponseBody, Any>?): IRequest {
+    override fun setResponseConverter(factory: Converter.Factory<Any>?): IRequest {
         responseConverterFactory = factory
         return this
     }

@@ -1,22 +1,18 @@
 package com.qxtx.idea.demo.http
 
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.qxtx.idea.demo.http.databinding.ActivityMainBinding
 import com.qxtx.idea.http.HttpBase
 import com.qxtx.idea.http.RequestMethod
-import com.qxtx.idea.http.callback.HttpInterceptor
+import com.qxtx.idea.http.interceptor.HttpInterceptor
 import com.qxtx.idea.http.callback.IHttpCallback
-import com.qxtx.idea.http.converter.FastjsonConverterFactory
+import com.qxtx.idea.http.converter.fastjson.FastjsonConverterFactory
 import com.qxtx.idea.http.response.Response
 import okhttp3.*
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
-import java.net.HttpCookie
-import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 /**
@@ -52,7 +48,7 @@ class MainActivity : AppCompatActivity() {
             HttpBase().apply {
                 init(2000)
 
-                var resp = newRequest("http://192.168.1.6:12346/login")
+                var resp= newRequest("http://192.168.1.6:12346/login")
                     .get()
                     .execute(Any())
                 println("登录回应的请求头：${resp.headers.toMultimap()}")
@@ -60,7 +56,7 @@ class MainActivity : AppCompatActivity() {
                 resp = newRequest("http://192.168.1.6:12346/logout")
                     .get()
                     .execute(Any())
-                println("登出结果：${resp.body}")
+                println("登出结果：${resp.stringBody()}")
             }
         }
     }
@@ -101,10 +97,10 @@ class MainActivity : AppCompatActivity() {
                     .setResponseConverter(FastjsonConverterFactory(Msg::class.java))
                     .post()
                     .addBody("111111111111".toRequestBody())
-                    .enqueue("请求1", object: IHttpCallback<Response> {
+                    .enqueue("请求1", object: IHttpCallback {
                         override fun onResponse(call: Call, response: Response) {
                             Log.d("请求结果", "1, success=${response.isSuccessful}" +
-                                    "msg=${response.body as Msg}，线程=${Thread.currentThread().name}")
+                                    "msg=${response.parseBody<Msg>()}，线程=${Thread.currentThread().name}")
                         }
                         override fun onFailure(call: Call?, e: IOException?) {
                             Log.d("请求结果","1, 请求失败！")
@@ -116,9 +112,9 @@ class MainActivity : AppCompatActivity() {
                     .setResponseConverter(null)
                     .post()
                     .addBody("222222222222".toRequestBody())
-                    .enqueue("请求2", object: IHttpCallback<Response> {
+                    .enqueue("请求2", object: IHttpCallback {
                         override fun onResponse(call: Call, response: Response) {
-                            Log.d("请求结果", "2, msg=${response.body}, 线程=${Thread.currentThread().name}")
+                            Log.d("请求结果", "2, msg=${response.rawBody()}, 线程=${Thread.currentThread().name}")
                         }
                         override fun onFailure(call: Call?, e: IOException?) {
                             Log.d("请求结果", "2, 请求失败！")
@@ -129,14 +125,14 @@ class MainActivity : AppCompatActivity() {
                     .setResponseConverter(FastjsonConverterFactory(MsgData::class.java))
                     .get()
                     .execute(Any()).apply {
-                        Log.d("请求结果", "3, msg=${body as MsgData?}, 线程=${Thread.currentThread().name}")
+                        Log.d("请求结果", "3, msg=${rawBody()}, 线程=${Thread.currentThread().name}")
                     }
 
                 request //patch请求
                     .setResponseConverter(null)
                     .requestMethod(RequestMethod.PATCH)
                     .execute(Any()).apply {
-                        Log.d("请求结果", "3, msg=$body")
+                        Log.d("请求结果", "3, msg=${rawBody()}")
                     }
             }
         }

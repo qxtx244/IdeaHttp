@@ -1,5 +1,6 @@
 package com.qxtx.idea.http.callback
 
+import com.qxtx.idea.http.response.Response
 import okhttp3.Call
 import java.io.IOException
 
@@ -11,9 +12,8 @@ import java.io.IOException
  * **Description**
  *
  * http结果回调接口
- * @param T 请求结果类型
  */
-interface IHttpCallback<T> {
+interface IHttpCallback {
 
     /**
      * 请求失败回调
@@ -27,5 +27,5 @@ interface IHttpCallback<T> {
      * @param call 请求对象
      * @param response 请求结果对象
      */
-    fun onResponse(call: Call, response: T)
+    fun onResponse(call: Call, response: Response)
 }

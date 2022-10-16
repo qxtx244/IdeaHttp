@@ -7,9 +7,9 @@ package com.qxtx.idea.http
  *
  * **Description**
  *
- * http请求头的字段
+ * http请求头字段
  */
-class HttpHeader {
+class RequestHeader {
 
     companion object {
         /**

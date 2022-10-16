@@ -34,6 +34,9 @@ dependencies {
 
     implementation project(':IdeaHttp')
 
+    implementation project(':ideahttp-converters:fastjson')
+    implementation project(':ideahttp-converters:moshi')
+
     implementation('androidx.core:core-ktx:1.3.2')
 
     implementation 'androidx.appcompat:appcompat:1.3.0'

@@ -1,3 +1,5 @@
 rootProject.name = "IdeaHttp"
 include ':demo'
 include ':IdeaHttp'
+include ':ideahttp-converters:fastjson'
+include ':ideahttp-converters:moshi'

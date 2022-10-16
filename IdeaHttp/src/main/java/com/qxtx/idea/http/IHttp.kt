@@ -1,6 +1,6 @@
 package com.qxtx.idea.http
 
-import com.qxtx.idea.http.callback.HttpInterceptor
+import com.qxtx.idea.http.interceptor.HttpInterceptor
 import okhttp3.OkHttpClient
 import java.net.HttpCookie
 

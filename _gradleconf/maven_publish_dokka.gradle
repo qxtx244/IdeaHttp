@@ -1,0 +1,408 @@
+import org.gradle.api.internal.artifacts.DefaultExcludeRule
+
+/**
+ * 实现上传到项目的maven仓库，适用于android library。请自行引入dokka插件
+ *
+ * 先决条件：
+ * 1. AGP 3.6或更高版本
+ * 2. Kotlin支持
+ * 3. Dokka支持
+ * 3. 引入org.jetbrains.kotlin.android（kotlin-android）插件
+ * 4. 引入dokka插件
+ *
+ * 配置方法：
+ * 1. 在目标module的build.gradle中的末尾添加代码：
+ *     ext {
+ *         //参数配置，按需设置，如果未设置，则使用预设值
+ *         //pomMavenCentral = 'maven仓库地址'
+ *     }
+ *     apply from: '这个文件的路径'
+ * 2. sync工程，然后build构建项目，执行assemble打包项目；
+ * 3. 点击展开AS右侧的"Gradle"面板，依次展开project层级目录》Tasks》publishing，双击执行"publish"任务，等待执行完成。
+ *
+ * 注意，因为需要一些agp插件中的变量，因此必须在android{}之后配置，建议放到build.gradle的最后面
+ *
+ * 允许在外部配置关键参数，可使用的ext变量如下（在build.gradle中配置：ext.xxx = yyy）。当未定义时，将取默认值
+ *  pomMavenAccount   maven账户信息，ArrayList<String>类型，格式：['USER', 'PASSWORD']
+ *  pomMavenCentral   maven仓库地址，String类型
+ *  pomGroupId        String类型，组id。通常使用module包名
+ *  pomArtifactId    String类型，artifactId。通常使用module名称，即project.name
+ *  pomVersionName   String类型，版本名称。发布到snapshots仓库需要在末尾加上'-SNAPSHOT'
+ *  pomDesc           描述信息，String类型
+ *  pomSrcDirs       源码目录，ArrayList<String>类型，格式：['a/b/x', 'a/b', ...]
+ *  pomJavaDoc       是否生成javaDoc，取值为"true"|"false"
+ *  pomHtmlDoc       是否生成htmlDoc，取值为"true"|"false"
+ */
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        //不要轻易改动dokka插件版本，高版本gradle不支持高版本dokka
+        //classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.6.21'
+        classpath 'org.jetbrains.dokka:dokka-gradle-plugin:1.6.10'
+    }
+}
+apply plugin: 'maven-publish'
+apply plugin: 'kotlin-android'
+apply plugin: 'org.jetbrains.dokka'
+
+/**
+ * 获取是否生成htmlDoc的配置信息。如果未配置，默认返回false
+ * @return true表示生成htmlDoc，否则不生成htmlDoc
+ */
+private boolean isHtmlDocEnable() {
+    def ret = getPomExt("pomHtmlDoc")
+    if (ret == null) ret = 'false'
+    ret.toLowerCase() == 'true'
+}
+
+/**
+ * 获取是否生成javaDoc的配置信息。如果未配置，默认返回false
+ * @return true表示生成javaDoc，否则不生成javaDoc
+ */
+private boolean isJavaDocEnable() {
+    def ret = getPomExt("pomJavaDoc")
+    if (ret == null) ret = 'false'
+    ret.toLowerCase() == 'true'
+}
+
+/**
+ * 获取maven私服验证信息，即账户和密码。如果为null，则表示不需要使用账户密码
+ * @return 账户和密码
+ */
+private ArrayList<String> getPomMavenAccount() {
+    getPomExt("pomMavenAccount")
+}
+
+/**
+ * 获取maven仓库地址，如果ext未定义，使用本地maven仓库
+ * @return maven仓库地址
+ */
+private String getPomMavenCentral() {
+    def url = getPomExt("pomMavenCentral")
+    if (url == null) url = "${System.getProperties().getProperty('user.home')}/.mavenCentral"
+    if (url == null) throw new Exception("无法获取maven仓库地址！")
+    url.toString()
+}
+
+/**
+ * 获取groupId，如果ext未定义，则默认获取AndroidManifest.xml中定义的包名
+ * @return groupId
+ */
+private String getPomGroupId() {
+    def groupId = null
+    try {
+        groupId = getPomExt("pomGroupId")
+        if (groupId == null) {
+            def slurper = new XmlSlurper()
+            def file = file('src/main/AndroidManifest.xml')
+            if (file.exists()) {
+                def result = slurper.parse(file)
+                groupId = result['@package']
+            }
+        }
+        if (groupId == null) throw Exception("无法获取groupId！")
+        groupId = groupId.toString().replaceAll('/', '\\.').replaceAll('\\\\', '\\.')
+    } catch (Exception e) {
+        e.printStackTrace()
+    }
+    groupId.toString()
+}
+
+/**
+ * 获取artifactId，如果ext未定义，则使用project名称
+ * @return artifactId
+ */
+private String getPomArtifactId() {
+    def artifactId = getPomExt("pomArtifactId")
+    if (artifactId == null) artifactId = project.name
+    if (artifactId == null) throw Exception("无法获取artifactId！")
+    artifactId.toString()
+}
+
+/**
+ * 获取versionName，如果ext中未定义，则默认获取defaultConfig中定义的versionName
+ * @return versionName
+ */
+private String getPomVersion() {
+    def versionName = getPomExt("pomVersionName")
+    if (versionName == null) {
+        versionName = android.defaultConfig.versionName
+        if (versionName == null) {
+            versionName = '0.0.0'
+        }
+    }
+    if (versionName == null) throw Exception("无法获取versionName！")
+    versionName.toString()
+}
+
+/**
+ * 获取描述信息
+ * 如果ext未定义，则为空
+ * @return 描述信息
+ */
+private String getPomDesc() {
+    def desc = getPomExt("pomDesc")
+    if (desc == null) desc = ''
+    desc.toString()
+}
+
+/**
+ * 获取源码目录，如果ext未定义，则取main中的默认资源目录
+ * @return 可能为null
+ */
+private ArrayList<String> getPomSrcDirs() {
+    def dirs = getPomExt("pomSrcDirs")
+    if (dirs == null) dirs = android.sourceSets.main.java.srcDirs
+    dirs
+}
+
+private def getPomExt(String name) {
+    def extMap = getExtensions().extraProperties
+    if (extMap.has(name)) return extMap.get(name)
+    null
+}
+
+/**
+ * 使用dokka生成javaDoc文档，并打包成jar
+ */
+task javadocsJar(type: Jar, dependsOn: dokkaJavadoc, group: 'extension') {
+    getArchiveClassifier().set('javadoc')
+    def dirList = new ArrayList()
+    dokkaJavadoc.each {dokkaTask ->
+        //让dokka离线工作，防止一直下不了东西导致耗时超长
+        dokkaTask.offlineMode = true
+        dokkaTask.dokkaSourceSets {
+            named('main') {task ->
+                task.noAndroidSdkLink = true
+                task.includeNonPublic = false
+                task.skipEmptyPackages = false
+                task.reportUndocumented = false
+                task.skipDeprecated = false
+            }
+        }
+
+        def path = dokkaTask.outputDirectory.get().absolutePath
+        println "dokkaJavaDoc输出目录：$path"
+        dirList.add(path)
+    }
+
+    from dirList
+
+    doLast {
+        println "dokkaJavaDoc jar输出目录：${Arrays.toString(dirList.toArray(new String[0]))}"
+    }
+}
+
+/**
+ * 使用dokka生成html文档，并打包成jar
+ */
+task htmlDocJar(type: Jar, dependsOn: dokkaHtml, group: 'extension') {
+    getArchiveClassifier().set('html-doc')
+    def dirList = new ArrayList()
+    dokkaHtml.each { dokkaTask ->
+        //让dokka离线工作，防止一直下不了东西导致耗时超长
+        dokkaTask.offlineMode = true
+        dokkaTask.dokkaSourceSets {
+            named('main') {task ->
+                task.noAndroidSdkLink = true
+                task.includeNonPublic = false
+                task.skipEmptyPackages = false
+                task.reportUndocumented = false
+                task.skipDeprecated = false
+            }
+        }
+        //org.jetbrains.dokka.gradle.DokkaTask
+        def path = dokkaTask.outputDirectory.get().absolutePath
+        println "dokkaHtml输出目录：$path"
+        dirList.add(path)
+    }
+    from dirList
+
+    doLast {
+        println "dokkaHtml jar输出目录：${Arrays.toString(dirList.toArray(new String[0]))}"
+    }
+}
+
+/**
+ * 打包源码成jar
+ */
+task sourcesJar(type: Jar, group: 'extension') {
+    getArchiveClassifier().set('sources')
+    from getPomSrcDirs()
+    doLast {
+        println "源码jar输出目录：${getDestinationDirectory().getAsFile().get().absolutePath}"
+    }
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+//            myPublication(MavenPublication) {
+//                  //...
+//            }
+            register(project.name, MavenPublication.class) {
+                println("groupId=${getPomGroupId()}" +
+                        "\nartifactId=${getPomArtifactId()}" +
+                        "\nversion=${getPomVersion()}" +
+                        "\ndesc=${getPomDesc()}")
+
+                groupId      getPomGroupId()
+                artifactId   getPomArtifactId()
+                version      getPomVersion()
+                description  getPomDesc()
+
+                String aarPath = findAarPath('release')
+                if (aarPath != null) {
+                    println "release版本的aar输出路径为：${aarPath}"
+                    artifact(aarPath)
+                }
+
+                artifact(sourcesJar)
+
+                if (isJavaDocEnable()) {
+                    artifact(javadocsJar)
+                }
+
+                if (isHtmlDocEnable()) {
+                    artifact(htmlDocJar)
+                }
+
+                //添加三方依赖
+                pom.withXml {
+                    //三方依赖项
+                    //<dependencies>
+                    //  ...
+                    //  <dependency>
+                    //      <groupId>x.x.x</groupId>
+                    //      <artifactId>yyy</artifactId>
+                    //      <version>z.z.z</version>
+                    //      <scope>compile|runtime</scope>
+                    //      <type>jar/war/aar/pom等等，默认jar</type>
+                    //  </dependency>
+                    //  ...
+                    //</dependencies>
+                    Node depNode = asNode().appendNode('dependencies')
+                    configurations.api.allDependencies.each { dependency ->
+                        Node node = addDependencyNode(depNode, dependency)
+                        if (node != null) {
+                            node.appendNode('scope', 'compile')
+
+                            //排除的依赖项
+                            addExclusionNode(dependency, node)
+                        }
+                    }
+
+                    //不考虑test
+                    //不考虑assembleDebug，只考虑assembleRelease
+                    ArrayList<String> list = new ArrayList<>()
+                    //找到执行的task名称列表
+                    gradle.startParameter.taskRequests.each { request ->
+                        list.addAll(request.args)
+                    }
+                    if (!list.isEmpty()) {
+                        if (list.contains('assembleRelease')) {
+                            configurations.releaseApi.allDependencies.each { dependency ->
+                                Node node = addDependencyNode(depNode, dependency)
+                                if (node != null) {
+                                    node.appendNode('scope', 'compile')
+                                    addExclusionNode(dependency, node)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        repositories {
+            maven {
+                def centralUrl = getPomMavenCentral()
+                url { uri(centralUrl) }
+                def info = getPomMavenAccount()
+                if (info != null) {
+                    credentials {
+                        username info[0]
+                        password info[1]
+                    }
+                } else {
+                    if (centralUrl.startsWith("http://xxx/xxx")) {
+                        //println "默认maven仓库，使用预置的账号认证"
+                        credentials {
+                            username 'xxx'
+                            password 'xxx'
+                        }
+                    }
+                }
+                allowInsecureProtocol true
+            }
+        }
+    }
+
+    //只是为了输出控制台日志
+    def centralUrl = getPomMavenCentral()
+    def artifactId = getPomArtifactId()
+    def groupId = getPomGroupId()
+    def versionName = getPomVersion()
+    def fullyPath = "$centralUrl/$groupId/$artifactId"
+    println "${artifactId} 模块的maven仓库：$fullyPath, 最新版本为${versionName}. See $centralUrl"
+}
+
+/**
+ * 排除的依赖项
+ * <dependency>
+ *  ...
+ *  <exclusions>
+ *      <exclusion>
+ *          <groupId>xxx</groupId>
+ *          <artifactId>xxx</artifactId>
+ *      </exclusion>
+ *  </exclusions>
+ *  ...
+ * </dependency>
+ */
+private def addExclusionNode(Dependency dependency, Node dependencyNode) {
+    HashSet<DefaultExcludeRule> set = dependency.excludeRules
+    if (set != null && !set.isEmpty()) {
+        def exclusionNode = dependencyNode.appendNode('exclusions')
+        set.each { rule ->
+            //println "添加依赖排除项：${rule.group}:${rule.module}"
+            def excludeNode = exclusionNode.appendNode('exclusion')
+            excludeNode.appendNode('groupId', rule.group)
+            excludeNode.appendNode('artifactId', rule.module)
+        }
+    }
+}
+
+private Node addDependencyNode(Node dependencyNode, Dependency dependency) {
+    Node node = null
+    if (dependency.name != 'unspecified' && dependency.group != null
+            && dependency.version != null && dependency.version != 'unspecified') {
+        //println "dept name=${dependency.name}, group=${dependency.group}, version=${dependency.version}"
+        node = dependencyNode.appendNode('dependency')
+        node.appendNode('groupId', dependency.group)
+        node.appendNode('artifactId', dependency.name)
+        node.appendNode('version', dependency.version)
+    }
+    node
+}
+
+/**
+ * 找到release版本的aar输出路径
+ * @param buildType 构建版本，取值为"release"或"debug"
+ */
+private def findAarPath(String buildType) {
+    String aarPath = null
+    android.libraryVariants.all { variant ->
+        variant.outputs.all { output ->
+            if (variant.name == buildType && outputFileName.endsWith(".aar")) {
+                def destDir = variant.getPackageLibrary().destinationDir
+                aarPath = "${destDir.absolutePath}/${outputFileName}"
+            }
+        }
+    }
+    aarPath
+}

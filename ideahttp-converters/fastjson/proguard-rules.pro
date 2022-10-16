@@ -1,43 +1,3 @@
-#--------------------------------- 一些proguard配置项 ------------------------------------
-#这会产生日志
-#Specifies to write out some more information during processing.
-#If the program terminates with an exception, this option will print out the entire stack trace, instead of just the exception message.
-#-verbose
-
-#在进行任何一种处理的日志，都将会输出到这里
-#Specifies to write out the internal structure of the class files, after any processing.
-#The structure is printed to the standard output or to the given file. For example, you may want to write out the contents of a given jar file,
-#without processing it at all.
-#-dump "YOUR FILE ABSOLUTEPATH"
-
-#将匹配-keep混淆规则的类或成员日志输出到指定文件
-#Specifies to exhaustively list classes and class members matched by the various -keep options.
-#The list is printed to the standard output or to the given file. The list can be useful to verify if the intended class members are really found,
-# especially if you're using wildcards. For example, you may want to list all the applications or all the applets that you are keeping.
-#-printseeds "YOUR FILE ABSOLUTEPATH"
-
-#将被移除的代码列表日志输出到指定文件
-#Specifies to list dead code of the input class files. The list is printed to the standard output or to the given file.
-#For example, you can list the unused code of an application. Only applicable when shrinking.
-#-printusage "YOUR FILE ABSOLUTEPATH"
-
-#将重命名日志输出到文件，这里可以找到旧名称->新名称的映射关系
-#Specifies to print the mapping from old names to new names for classes and class members that have been renamed.
-#The mapping is printed to the standard output or to the given file. For example, it is required for subsequent incremental obfuscation,
-# or if you ever want to make sense again of obfuscated stack traces. Only applicable when obfuscating.
-#-printmapping "YOUR FILE ABSOLUTEPATH"
-
-#直接使用一个已经存在的mapping文件来作为混淆规则
-#Specifies to reuse the given name mapping that was printed out in a previous obfuscation run of ProGuard.
-#Classes and class members that are listed in the mapping file receive the names specified along with them.
-#Classes and class members that are not mentioned receive new names.
-#The mapping may refer to input classes as well as library classes.
-#This option can be useful for incremental obfuscation, i.e. processing add-ons or small patches to an existing piece of code.
-#In such cases, you should consider whether you also need the option -useuniqueclassmembernames. Only a single mapping file is allowed.
-#Only applicable when obfuscating.
-#-applymapping "YOUR FILE ABSOLUTEPATH"
-#----------------------------------------------------------------------------
-
 -keepattributes *Annotation*
 
 # For native methods, see http://proguard.sourceforge.net/manual/examples.html#native
@@ -165,11 +125,4 @@
    public <init> (org.json.JSONObject);
 }
 
--assumenosideeffects class com.qxtx.idea.http.tools.HttpLog {
-    public static void v(...);
-    public static void d(...);
-}
-
--keep class com.qxtx.idea.http** {*;}
--keep class okhttp3.** {*;}
--keep class okio.** {*;}
+-keep class com.qxtx.idea.http.converter.fastjson.** { *; }

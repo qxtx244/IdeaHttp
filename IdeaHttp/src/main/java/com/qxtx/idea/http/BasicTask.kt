@@ -1,13 +1,9 @@
 package com.qxtx.idea.http
 
-import android.hardware.camera2.CameraConstrainedHighSpeedCaptureSession
-import android.net.Uri
-import android.os.Parcel
-import android.os.Parcelable
+import com.qxtx.idea.http.call.CallWrapper
 import com.qxtx.idea.http.callback.IHttpCallback
 import com.qxtx.idea.http.response.Response
 import com.qxtx.idea.http.tools.forEach
-import com.qxtx.idea.http.call.ConverterCall
 import com.qxtx.idea.http.call.ExecutorCall
 import com.qxtx.idea.http.call.ICall
 import com.qxtx.idea.http.task.ITask
@@ -19,7 +15,6 @@ import java.io.IOException
 import java.lang.Exception
 import java.lang.RuntimeException
 import java.net.HttpCookie
-import java.util.*
 import kotlin.collections.ArrayList
 
 /**
@@ -69,12 +64,12 @@ abstract class BasicTask(
         }
     }
 
-    override fun enqueue(tag: Any, callback: IHttpCallback<Response>) {
+    override fun enqueue(tag: Any, callback: IHttpCallback) {
         val call = newCall(tag)
         if (call == null) {
             callback.onFailure(null, null)
         } else {
-            call.enqueue(object: IHttpCallback<Response> {
+            call.enqueue(object: IHttpCallback {
                 override fun onFailure(call: Call?, e: IOException?) {
                     callback.onFailure(call, e)
                 }
@@ -87,7 +82,7 @@ abstract class BasicTask(
         }
     }
 
-    private fun newCall(tag: Any?): ICall<Response>? {
+    private fun newCall(tag: Any?): ICall? {
         val realUrl = appendUrlAndParams()
 
         //2022/6/7 14:24 这里可以像retrofit那样，自行组装Request对象，
@@ -170,10 +165,10 @@ abstract class BasicTask(
         }
 
         val converter = basicRequest.responseConverterFactory?.responseBodyConverter()
-        val convertCall = ConverterCall(rawCall, converter)
-        val executorCall = ExecutorCall(convertCall, basicRequest.callbackExecutor)
+        val executorCall = ExecutorCall(
+            call = CallWrapper(converter = converter, call = rawCall),
+            executor = basicRequest.callbackExecutor)
 
-        //装饰功能
         return executorCall
     }
 

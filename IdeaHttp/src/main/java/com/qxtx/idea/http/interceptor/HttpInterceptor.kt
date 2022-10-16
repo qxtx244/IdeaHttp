@@ -1,4 +1,4 @@
-package com.qxtx.idea.http.callback
+package com.qxtx.idea.http.interceptor
 
 import okhttp3.Interceptor
 import okhttp3.Response

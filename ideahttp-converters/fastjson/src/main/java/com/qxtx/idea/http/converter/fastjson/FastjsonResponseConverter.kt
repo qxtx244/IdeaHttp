@@ -1,8 +1,10 @@
-package com.qxtx.idea.http.converter
+package com.qxtx.idea.http.converter.fastjson
 
 import com.alibaba.fastjson.JSON
+import com.qxtx.idea.http.converter.Converter
 import okhttp3.ResponseBody
 import java.io.IOException
+import java.lang.Exception
 import java.lang.reflect.Type
 import java.nio.charset.Charset
 import kotlin.jvm.Throws
@@ -20,17 +22,21 @@ import kotlin.jvm.Throws
  * @property type 反序列化的目标类型
  * @constructor 通过传入的类型对象，构造一个反序列化器
  */
-class FastjsonConverter<R>(
+class FastjsonResponseConverter<R>(
     private val type: Type
-): Converter<ResponseBody, R> {
+): Converter<ResponseBody, R?> {
 
     @Throws(IOException::class)
-    override fun convert(value: ResponseBody): R {
-        value.use {
-            //2022/5/17 16:23 用字节流的方式应对大数据
-            val stream = it.byteStream()
-            val result: R = JSON.parseObject(stream, Charset.defaultCharset(), type)
-            return result
+    override fun convert(value: ResponseBody): R? {
+        return try {
+            value.use {
+                //2022/5/17 16:23 用字节流的方式应对大数据
+                val stream = it.byteStream()
+                JSON.parseObject(stream, Charset.defaultCharset(), type) as R?
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 }

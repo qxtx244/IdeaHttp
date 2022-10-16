@@ -1,5 +1,6 @@
 package com.qxtx.idea.http.call
 
+import com.qxtx.idea.http.R
 import com.qxtx.idea.http.callback.IHttpCallback
 import com.qxtx.idea.http.response.Response
 import okhttp3.Call
@@ -18,21 +19,21 @@ import java.util.concurrent.Executor
  *
  * 线程切换的实现，okhttp3.Call的装饰者
  * @property call [ICall]对象
- * @property executor [Executor]对象，用于切换线程
+ * @property executor Executor对象，用于切换线程
  * @constructor 构造包装对象实例
  */
 class ExecutorCall(
-    private val call: ICall<Response>,
+    private val call: ICall,
     private val executor: Executor
-    ): ICall<Response> {
+    ): ICall {
 
     @Throws(Exception::class)
     override fun execute(): Response {
         return call.execute()
     }
 
-    override fun enqueue(responseCallback: IHttpCallback<Response>) {
-        call.enqueue(object: IHttpCallback<Response> {
+    override fun enqueue(responseCallback: IHttpCallback) {
+        call.enqueue(object: IHttpCallback {
             override fun onResponse(call: Call, response: Response) {
                 executor.execute {
                     responseCallback.onResponse(call, response)

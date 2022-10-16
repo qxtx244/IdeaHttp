@@ -1,6 +1,6 @@
 package com.qxtx.idea.http
 
-import com.qxtx.idea.http.callback.HttpInterceptor
+import com.qxtx.idea.http.interceptor.HttpInterceptor
 import com.qxtx.idea.http.tools.HttpLog
 import com.qxtx.idea.http.verifier.SslSocketHelper
 import okhttp3.Call

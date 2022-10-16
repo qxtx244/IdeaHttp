@@ -1,0 +1,42 @@
+plugins {
+    id 'com.android.library'
+    id 'kotlin-android'
+    id 'org.jetbrains.dokka'
+}
+
+android {
+    compileSdkVersion compileSdkVer
+
+    defaultConfig {
+        minSdkVersion minSdkVer
+
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:' + versions.core_ktx
+
+    def moshiVer = '1.13.0'
+    api('com.squareup.moshi:moshi:' + moshiVer) {
+        exclude group: 'com.squareup.okio', module: 'okio'
+    }
+    //2022/10/10 23:25: 不使用kapt的方式，尽管它能节省2.5MB的体积且不影响运行时性能，
+    // 但是这会增加接入复杂度（目标项目需要手动添加kapt和这个依赖），无法做到一行依赖完成sdk依赖
+    //  决定改为使用反射的方式（这个库体积2.5MB）
+    //kapt "com.squareup.moshi:moshi-kotlin-codegen:${moshiVer}"
+    api 'com.squareup.moshi:moshi-kotlin:' + moshiVer
+
+    implementation project(':IdeaHttp')
+}

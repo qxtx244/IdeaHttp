@@ -64,7 +64,7 @@ interface IRequest {
      * 设置请求结果数据的反序列化器
      * @param factory Converter的工厂对象，用于生成[Converter]对象
      */
-    fun setResponseConverter(factory: Converter.Factory<ResponseBody, Any>?): IRequest
+    fun setResponseConverter(factory: Converter.Factory<Any>?): IRequest
 
     /**
      * 与baseUrl拼接得到完整的url地址，每次设置将覆盖上一次的设置
