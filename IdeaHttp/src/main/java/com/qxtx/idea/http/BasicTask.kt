@@ -1,5 +1,6 @@
 package com.qxtx.idea.http
 
+import androidx.annotation.CallSuper
 import com.qxtx.idea.http.call.CallWrapper
 import com.qxtx.idea.http.callback.IHttpCallback
 import com.qxtx.idea.http.response.Response
@@ -46,6 +47,7 @@ abstract class BasicTask(
     /** 请求数据的数据集，可存在多种不同的请求数据 */
     protected val requestBodys: MutableList<RequestBody> = ArrayList()
 
+    @CallSuper
     override fun execute(tag: Any): Response {
         try {
             val response: Response? = try {
@@ -64,6 +66,7 @@ abstract class BasicTask(
         }
     }
 
+    @CallSuper
     override fun enqueue(tag: Any, callback: IHttpCallback) {
         val call = newCall(tag)
         if (call == null) {
@@ -71,10 +74,18 @@ abstract class BasicTask(
         } else {
             call.enqueue(object: IHttpCallback {
                 override fun onFailure(call: Call?, e: IOException?) {
+                    synchronized(HttpBase.callMap) {
+                        HttpBase.callMap -= tag
+                    }
+
                     callback.onFailure(call, e)
                 }
 
                 override fun onResponse(call: Call, response: Response) {
+                    synchronized(HttpBase.callMap) {
+                        HttpBase.callMap -= tag
+                    }
+
                     checkCookie(response)
                     callback.onResponse(call, response)
                 }

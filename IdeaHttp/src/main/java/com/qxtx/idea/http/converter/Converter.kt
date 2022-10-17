@@ -21,11 +21,9 @@ interface Converter<V, R> {
     @Throws(Exception::class)
     fun convert(value: V): R
 
-    //2022/6/13 11:06 V和V1，R和R1并没有任何关系，用不同名称来强调这个点
     /**
      * 抽象工厂类
      * @param V1 数值类型
-     * @param R1 处理后的对象类型
      */
     abstract class Factory<T> {
 
@@ -39,7 +37,7 @@ interface Converter<V, R> {
          * 获取反序列化对象
          * @return 反序列化器对象
          */
-        abstract fun responseBodyConverter(): Converter<ResponseBody, T?>
+        abstract fun responseBodyConverter(): Converter<ResponseBody, T?>?
 
         abstract fun requestBodyConverter(): Converter<T, RequestBody>
     }

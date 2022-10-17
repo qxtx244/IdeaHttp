@@ -9,15 +9,11 @@ import com.alibaba.fastjson.annotation.JSONCreator
  *
  * **Description**
  *
- * kotlin的data class在fastjson下的反序列化测试
+ * data class通过moshi的反序列化测试类
  */
 data class MsgData(
     var msg: String?
 ) {
-
-    @JSONCreator
-    constructor(): this(null)
-
     override fun toString(): String {
         return "MsgData(msg=$msg)"
     }

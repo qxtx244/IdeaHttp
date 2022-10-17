@@ -14,7 +14,7 @@ import java.lang.reflect.Type
  *
  * 使用FastJson进行反序列化的Converter工厂类
  * @property type 反序列化的目标类型对象，通过此对象，构造具体的反序列化器
- * @property V 数据类型，应和[type]的类型一致
+ * @property V 数据类型
  * @constructor 构造反序列化工厂对象
  */
 class FastjsonConverterFactory<V> @JvmOverloads constructor(
@@ -24,13 +24,12 @@ class FastjsonConverterFactory<V> @JvmOverloads constructor(
     override fun type() = type
 
     /**
-     * 解析ResponseBody对象，转换成指定的类型对象。如果[type]为null，则视为转换成String类型
+     * 解析ResponseBody对象，转换成指定的类型对象。如果[type]为null，则不生成反序列化器。
      *
      * @return [Converter]对象
      */
-    override fun responseBodyConverter(): Converter<ResponseBody, V?> {
-        val fixedType: Type = type ?: String::class.java
-        return FastjsonResponseConverter(fixedType)
+    override fun responseBodyConverter(): Converter<ResponseBody, V?>? {
+        return type?.let { FastjsonResponseConverter(it) }
     }
 
     /**
