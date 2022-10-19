@@ -4,6 +4,8 @@ plugins {
     id 'org.jetbrains.dokka'
 }
 
+apply from: "${rootDir.absolutePath}/_gradleconf/dokka_configure.gradle"
+
 android {
     compileSdkVersion compileSdkVer
 
@@ -22,8 +24,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility jdk11Ver
+        targetCompatibility jdk11Ver
     }
 }
 

@@ -6,15 +6,6 @@ import okhttp3.ResponseBody.Companion.asResponseBody
 import okio.Buffer
 
 /**
- * @author QXTX-WORK
- *
- * **Create Date** 2022/10/17 9:33
- *
- * **Description**
- *
- */
-
-/**
  * 观察请求数据。此操作不会对请求数据产生影响，但要留意OOM的风险。最大允许观察1MB的数据
  *
  * @param byteCount 最大允许解析的数据大小，单位为byte

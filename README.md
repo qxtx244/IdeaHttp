@@ -2,7 +2,7 @@ IdeaHttp
 ========
 
 ## **概述**
-+ 基于[OkHttp3](https://github.com/square/okhttp)封装
++ 基于[OkHttp](https://github.com/square/okhttp)封装
 + 支持请求结果回调的自动线程切换
 + 链式调用在使用上更加简洁
 + 默认支持https请求
@@ -23,7 +23,8 @@ IdeaHttp
    ```
    buildscript {
      repositories {
-         mavenCentral() //添加这行代码
+        google()
+         mavenCentral()
      }
    }
    ```
@@ -31,16 +32,27 @@ IdeaHttp
    ```
    dependencyResolutionManagement {
         repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-        repositories {              
-            mavenCentral()  //添加这行代码
+        repositories {  
+            google()                 
+            mavenCentral()
         }
     }
    ```
    注意，如果这里是**RepositoriesMode.PREFER_PROJECT**，则应改为使用Gradle6.x版本的配置方式
-2. 在目标module的build.gradle中
+2. 添加依赖  
+   在目标module的build.gradle中
    ```
    dependencies {
      implementation('io.github.qxtx244.http:IdeaHttp:1.0.2')  //添加这行代码
+   }
+   ```
+3. 添加反序列化库（可选）  
+   在目标module的build.gradle中
+   ```
+   dependencies {
+     def converterVer = '1.0.2'
+     implementation "io.github.qxtx244.http:converter-fastjson:${converterVer}"  //基于FastJson的反序列化库
+     implementation "io.github.qxtx244.http:converter-moshi:${converterVer}"  //基于Moshi的反序列化库
    }
    ```
 
@@ -130,6 +142,7 @@ Response对象提供对请求数据格式进行转换的多种方法，包括反
   ```
   val data = response.parseBody<R>(converter)
   ```
+  R: 反序列化的目标类型
   使用特定的反序列化器对请求数据进行一次反序列化。反序列化优先级：converter > `setResponseConverter`方法设置的反序列化器。
   当未配置反序列化器时，返回的请求数据类型为原来的okhttp3.ResponseBody。  
   一个Response对象仅可以调用一次，之后请求数据将会丢失。

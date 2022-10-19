@@ -29,9 +29,7 @@ ext {
     gradleConfPath = "${rootDir.absolutePath}/_gradleconf"
 
     //android library发布到maven仓库的实现脚本的绝对路径
-    androidMavenConfPath = "$gradleConfPath/maven_publish_android.gradle"
-    //java library发布到maven仓库的实现脚本的绝对路径
-    javaMavenConfPath = "$gradleConfPath/maven_publish_java.gradle"
+    androidMavenConfPath = "$gradleConfPath/maven_publish_android_dokka.gradle"
 
     //基础仓库+自定义仓库
     aliRepo = [
@@ -41,11 +39,8 @@ ext {
             'https://maven.aliyun.com/repository/gradle-plugin',
     ]
 
-    jdk8Ver = JavaVersion.VERSION_1_8
+    jdk11Ver = JavaVersion.VERSION_11
 
-    buildGradleVer = '4.2.0'
     minSdkVer = 23
     compileSdkVer = 31
-    buildToolsVer = '28.0.0'
-    targetSdkVer = 26
 }

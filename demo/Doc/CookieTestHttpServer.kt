@@ -1,4 +1,4 @@
-package com.qxtx.enjoystudy
+package com.qxtx.idea.demo.http
 
 import com.sun.net.httpserver.HttpServer
 import java.net.InetSocketAddress
@@ -15,7 +15,7 @@ import kotlin.concurrent.thread
  * http服务端实现，用于测试IdeaHttp对Cookie的自动缓存和应用能力，或者get/post等一般请求
  */
 fun main() {
-    val server = HttpServer.create(InetSocketAddress("192.168.1.6", 12346), 0)
+    val server = HttpServer.create(InetSocketAddress("127.0.0.1", 12346), 0)
 
     val testCookie1 = "test-cookie=xxxxxx;Path=/;Expires=Sun, 07 Aug 2023 11:13:00 GMT"
     val testCookie2 = "test-cookie2=yyy;Path=/;Expires=Wed, 09 Jun 2024 10:18:14 GMT"

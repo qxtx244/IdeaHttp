@@ -93,7 +93,7 @@ class MainActivity : AppCompatActivity() {
         }
         thread {
             http.apply {
-                val request = newRequest("http://192.168.3.247:12346/httpserver")
+                val request = newRequest("http://127.0.0.1:12346/httpserver")
                     .addHeader("header1", "HEADER1")
                     .addUrlParam("param1", "PARAM1")
                     .addUrlParam("param2", "中文示例")

@@ -55,7 +55,7 @@ apply plugin: 'org.jetbrains.dokka'
  */
 private boolean isHtmlDocEnable() {
     def ret = getPomExt("pomHtmlDoc")
-    if (ret == null) ret = 'false'
+    if (ret == null) ret = 'true'
     ret.toLowerCase() == 'true'
 }
 
@@ -65,7 +65,7 @@ private boolean isHtmlDocEnable() {
  */
 private boolean isJavaDocEnable() {
     def ret = getPomExt("pomJavaDoc")
-    if (ret == null) ret = 'false'
+    if (ret == null) ret = 'true'
     ret.toLowerCase() == 'true'
 }
 
@@ -88,6 +88,7 @@ private String getPomMavenCentral() {
     url.toString()
 }
 
+//import groovy.util.XmlSlurper
 /**
  * 获取groupId，如果ext未定义，则默认获取AndroidManifest.xml中定义的包名
  * @return groupId
@@ -132,7 +133,7 @@ private String getPomVersion() {
     if (versionName == null) {
         versionName = android.defaultConfig.versionName
         if (versionName == null) {
-            versionName = '0.0.0'
+            versionName = '1.0.0'
         }
     }
     if (versionName == null) throw Exception("无法获取versionName！")
@@ -285,9 +286,9 @@ afterEvaluate {
                     //  </dependency>
                     //  ...
                     //</dependencies>
-                    Node depNode = asNode().appendNode('dependencies')
+                    def depNode = asNode().appendNode('dependencies')
                     configurations.api.allDependencies.each { dependency ->
-                        Node node = addDependencyNode(depNode, dependency)
+                        def node = addDependencyNode(depNode, dependency)
                         if (node != null) {
                             node.appendNode('scope', 'compile')
 
@@ -306,7 +307,7 @@ afterEvaluate {
                     if (!list.isEmpty()) {
                         if (list.contains('assembleRelease')) {
                             configurations.releaseApi.allDependencies.each { dependency ->
-                                Node node = addDependencyNode(depNode, dependency)
+                                def node = addDependencyNode(depNode, dependency)
                                 if (node != null) {
                                     node.appendNode('scope', 'compile')
                                     addExclusionNode(dependency, node)
@@ -364,7 +365,7 @@ afterEvaluate {
  *  ...
  * </dependency>
  */
-private def addExclusionNode(Dependency dependency, Node dependencyNode) {
+private def addExclusionNode(Dependency dependency, def dependencyNode) {
     HashSet<DefaultExcludeRule> set = dependency.excludeRules
     if (set != null && !set.isEmpty()) {
         def exclusionNode = dependencyNode.appendNode('exclusions')
@@ -377,8 +378,8 @@ private def addExclusionNode(Dependency dependency, Node dependencyNode) {
     }
 }
 
-private Node addDependencyNode(Node dependencyNode, Dependency dependency) {
-    Node node = null
+private def addDependencyNode(def dependencyNode, Dependency dependency) {
+    def node = null
     if (dependency.name != 'unspecified' && dependency.group != null
             && dependency.version != null && dependency.version != 'unspecified') {
         //println "dept name=${dependency.name}, group=${dependency.group}, version=${dependency.version}"

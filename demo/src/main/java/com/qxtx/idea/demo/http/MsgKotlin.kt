@@ -9,7 +9,7 @@ import com.alibaba.fastjson.annotation.JSONCreator
  *
  * **Description**
  * 在fastjson1.2.32下，对构造函数使用@JSONCreator注解，
- * 能使类能较好地被反序列化，避免找不到构造方法的异常
+ * 能使kotlin类能较好地被反序列化，避免找不到构造方法的异常
  */
 class MsgKotlin {
 

@@ -1,0 +1,30 @@
+/**
+ * @author QXTX-WIN
+ * 让dokka在离线模式下工作，防止一直下载不了东西导致耗时超长
+ * 无法下载：https://developer.android.com/reference/androidx/package-list
+ */
+
+dokkaHtml.each {
+    doOffline(it)
+}
+dokkaJavadoc.each {
+    doOffline(it)
+}
+dokkaGfm.each {
+    doOffline(it)
+}
+dokkaJekyll.each {
+    doOffline(it)
+}
+
+private def doOffline(def task) {
+    //让dokka离线工作，防止一直下不了东西导致耗时超长
+    task.offlineMode = true
+    task.dokkaSourceSets {
+        named('main') {
+            it.noAndroidSdkLink = true
+            it.noJdkLink = true
+            it.noStdlibLink = true
+        }
+    }
+}
