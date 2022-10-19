@@ -30,8 +30,6 @@ public class Msg {
 
     @Override
     public String toString() {
-        return "Msg{" +
-                "msg='" + msg + '\'' +
-                '}';
+        return String.format("Msg(msg=%s)", msg);
     }
 }

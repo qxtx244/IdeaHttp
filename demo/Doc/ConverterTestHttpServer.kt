@@ -30,9 +30,9 @@ fun main() {
             while (true) {
                 val readLen = reqBodyStream.read(array)
                 if (readLen < 4096) {
+                    size = readLen
                     break
                 }
-                println("接收大小：$readLen")
                 size += readLen
             }
             println("接收的请求体大小：$size")

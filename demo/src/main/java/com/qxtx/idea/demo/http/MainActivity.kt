@@ -5,12 +5,15 @@ import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import com.qxtx.idea.demo.http.databinding.ActivityMainBinding
+import com.qxtx.idea.http.ContentType
 import com.qxtx.idea.http.HttpBase
 import com.qxtx.idea.http.interceptor.HttpInterceptor
 import com.qxtx.idea.http.callback.IHttpCallback
 import com.qxtx.idea.http.converter.fastjson.FastjsonConverterFactory
 import com.qxtx.idea.http.converter.moshi.MoshiConverterFactory
+import com.qxtx.idea.http.converter.moshi.MoshiHelper
 import com.qxtx.idea.http.response.Response
+import com.qxtx.idea.http.tools.MultiPair
 import okhttp3.*
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
@@ -97,16 +100,21 @@ class MainActivity : AppCompatActivity() {
 
                 request //线程1，反序列化为Msg.java
                     .setExecutor { thread(name = "测试线程1") { it.run() } }
-                    .setResponseConverter(FastjsonConverterFactory(Msg::class.java))
+                    .setResponseConverter(MoshiConverterFactory(Msg::class.java))
                     .post()
-                    .addBody("111111111111".toRequestBody())
+                    .addBody("11222".toRequestBody())
                     .enqueue("请求1", object: IHttpCallback {
                         override fun onResponse(call: Call, response: Response) {
-                            Log.e("TAG", "请求结果,fastjson"
+                            val body = response.parseBody<Msg>()
+                            Log.e("TAG", "请求结果,moshi"
                                     + ", success=${response.isSuccessful}"
-                                    + ", data=${response.parseBody<Msg>()}"
+                                    + ", data=${body}"
                                     + ", code=${response.code}, message=${response.message}"
                                     + ", 线程=${Thread.currentThread().name}")
+                            val json = MoshiHelper.toJsonString(body)
+                            val map = MoshiHelper.toMap(json)
+                            val jsonObj = MoshiHelper.toJsonObject(json)
+                            Log.e("TAG", "序列化结果： str=$json, map=$map, obj=$jsonObj")
                         }
                         override fun onFailure(call: Call?, e: IOException?) {
                             Log.e("TAG","请求结果,fastjson, 请求失败！")
@@ -128,10 +136,10 @@ class MainActivity : AppCompatActivity() {
 //                    })
 
                 request    //将结果反序列化为MsgKotlin.kt
-                    .setResponseConverter(MoshiConverterFactory(MsgData::class.java))
+                    .setResponseConverter(FastjsonConverterFactory(MsgData::class.java))
                     .get()
                     .execute(Any()).apply {
-                        Log.e("TAG", "请求结果,moshi"
+                        Log.e("TAG", "请求结果,fastjson"
                                 + ", success=$isSuccessful"
                                 + ", data=${parseBody<MsgData>()}, "
                                 + ", code=$code, message=$message"

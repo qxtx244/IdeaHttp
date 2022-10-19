@@ -40,7 +40,7 @@ IdeaHttp
 2. 在目标module的build.gradle中
    ```
    dependencies {
-     implementation('io.github.qxtx244.http:IdeaHttp:1.0.1')  //添加这行代码
+     implementation('io.github.qxtx244.http:IdeaHttp:1.0.2')  //添加这行代码
    }
    ```
 
@@ -154,8 +154,6 @@ Response对象提供对请求数据格式进行转换的多种方法，包括反
   ```
 
 ### **其它说明**
-+ **FastJson的版本选择**  
-  FastJson对kotlin的支持并不完美，目前验证1.2.32版本是可用的。如希望自行更换其它版本，请先确认目标版本是否支持kotlin类的序列化/反序列化。
 + **代码混淆**  
   模块本身不做混淆，如果宿主项目开启了混淆，请加入以下代码到混淆规则：
   ```
